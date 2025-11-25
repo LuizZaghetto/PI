@@ -179,7 +179,7 @@ train_file = st.file_uploader(
 
 if train_file:
     # OBS: sep=';' porque seus arquivos usam ponto-e-vírgula
-    df = pd.read_csv(train_file, sep=';')
+    df = pd.read_csv(train_file)
 
     if "time" not in df.columns:
         st.error("O arquivo precisa conter a coluna 'time'.")
