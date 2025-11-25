@@ -13,10 +13,6 @@ MODEL_FILE = os.path.join(MODEL_DIR, "model.pkl")
 SCALER_FILE = os.path.join(MODEL_DIR, "scaler.pkl")
 METRICS_FILE = os.path.join(MODEL_DIR, "metrics.json")
 
-
-# ----------------------------
-# Funções utilitárias
-# ----------------------------
 def load_model():
     if not os.path.exists(MODEL_FILE):
         return None
@@ -39,16 +35,11 @@ def reset_model_files():
             os.remove(os.path.join(MODEL_DIR, f))
 
 
-# ----------------------------
-# Layout Streamlit
-# ----------------------------
-st.title("📈 Sistema de Treino e Teste de Regressão Linear")
+st.title("Projeto Integrador")
 
 st.markdown("---")
 
-# =========================================
-# SEÇÃO 1 — TREINAMENTO
-# =========================================
+
 st.header("Treinar modelo")
 train_file = st.file_uploader(
     "Envie o CSV de treino (deve conter coluna 'time')",
@@ -91,9 +82,6 @@ if train_file:
 
 st.markdown("---")
 
-# =========================================
-# SEÇÃO 2 — TESTE
-# =========================================
 st.header("Testar modelo")
 
 test_file = st.file_uploader(
@@ -102,7 +90,11 @@ test_file = st.file_uploader(
     key="test"
 )
 
-contains_label = st.checkbox("O CSV contém rótulos ('time')?")
+has_label = st.checkbox("O CSV contém a coluna 'time'?")
+
+if has_label and "time" not in df.columns:
+    st.error("Você marcou que o arquivo tem rótulos, mas a coluna 'time' não existe.")
+    st.stop()
 
 if test_file:
     model = load_model()
@@ -112,7 +104,7 @@ if test_file:
         st.error("Nenhum modelo encontrado. Treine antes.")
     else:
         df = pd.read_csv(test_file)
-        if contains_label:
+        if has_label:
             y = df["time"]
             X = df.drop(columns=["time"])
         else:
@@ -137,9 +129,6 @@ if test_file:
 
 st.markdown("---")
 
-# =========================================
-# SEÇÃO 3 — RESETAR
-# =========================================
 st.header("🔄 Resetar Modelo")
 
 if st.button("Resetar"):
