@@ -61,7 +61,7 @@ train_file = st.file_uploader(
 )
 
 if train_file:
-    df = pd.read_csv(train_file)
+    df = pd.read_csv(train_file, sep=';')
 
     if "time" not in df.columns:
         st.error("O arquivo precisa conter a coluna 'time'.")
@@ -120,7 +120,7 @@ if test_file:
         st.error("Nenhum modelo encontrado. Treine antes de testar.")
         st.stop()
 
-    df = pd.read_csv(test_file)
+    df = pd.read_csv(test_file, sep=';')
     df.columns = [c.strip() for c in df.columns]
 
     # Identificar colunas esperadas no treino
