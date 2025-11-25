@@ -121,11 +121,12 @@ if test_file:
         st.stop()
 
     df = pd.read_csv(test_file)
-
-    # Normaliza colunas
     df.columns = [c.strip() for c in df.columns]
 
-    # Verifica rótulo
+    # Identificar colunas esperadas no treino
+    expected_cols = scaler.feature_names_in_
+
+    # Se CSV tem rótulo
     if has_label:
         if "time" not in df.columns:
             st.error("Você marcou que o CSV tem rótulo, mas não existe coluna 'time'.")
@@ -137,34 +138,28 @@ if test_file:
         y = None
         X = df.copy()
 
-    # Corrigir nomes das features
-    expected = scaler.feature_names_in_
-
-    # Verificar colunas faltantes
-    missing = [col for col in expected if col not in X.columns]
+    # Verificar se colunas esperadas existem
+    missing = [c for c in expected_cols if c not in X.columns]
     if missing:
         st.error(f"Faltam colunas no CSV: {missing}")
         st.stop()
 
-    # Deixa somente as colunas esperadas e na ordem correta
-    X = X[expected]
+    # Manter somente colunas esperadas e na ordem certa
+    X = X[expected_cols]
 
-    # Transformar
+    # Escalar e prever
     X_scaled = scaler.transform(X)
     predictions = model.predict(X_scaled)
 
-    # Resultado final
     df["predicted"] = predictions
 
     st.write("Resultado:")
     st.dataframe(df)
 
-    # Se houver rótulo no CSV, calcula RMSE
     if y is not None:
         rmse = calculate_rmse(y, predictions)
         st.success(f"RMSE no teste: {rmse:.4f}")
 
-    # Download CSV
     csv_bytes = df.to_csv(index=False).encode("utf-8")
     st.download_button("⬇ Baixar CSV com predições", csv_bytes, "resultado.csv")
 
