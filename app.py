@@ -13,6 +13,11 @@ MODEL_FILE = os.path.join(MODEL_DIR, "model.pkl")
 SCALER_FILE = os.path.join(MODEL_DIR, "scaler.pkl")
 METRICS_FILE = os.path.join(MODEL_DIR, "metrics.json")
 
+
+# ---------------------------
+# Utils
+# ---------------------------
+
 def load_model():
     if not os.path.exists(MODEL_FILE):
         return None
@@ -35,14 +40,22 @@ def reset_model_files():
             os.remove(os.path.join(MODEL_DIR, f))
 
 
-st.title("Projeto Integrador")
+# ---------------------------
+# UI
+# ---------------------------
 
+st.title("Projeto Integrador – Treino e Teste de Modelo")
 st.markdown("---")
 
 
-st.header("Treinar modelo")
+# ---------------------------
+# SEÇÃO: TREINO
+# ---------------------------
+
+st.header("📘 Treinar modelo")
+
 train_file = st.file_uploader(
-    "Envie o CSV de treino (deve conter coluna 'time')",
+    "Envie o CSV de treino (precisa conter coluna 'time')",
     type=["csv"],
     key="train"
 )
@@ -63,16 +76,17 @@ if train_file:
         model.fit(X_scaled, y)
 
         os.makedirs(MODEL_DIR, exist_ok=True)
+
         with open(MODEL_FILE, "wb") as f:
             pickle.dump(model, f)
         with open(SCALER_FILE, "wb") as f:
             pickle.dump(scaler, f)
 
         y_pred = model.predict(X_scaled)
-        mse = np.mean((y - y_pred) ** 2)
-        rmse = np.sqrt(mse)
+        mse = float(np.mean((y - y_pred) ** 2))
+        rmse = float(np.sqrt(mse))
 
-        metrics = {"mse": float(mse), "rmse": float(rmse)}
+        metrics = {"mse": mse, "rmse": rmse}
         with open(METRICS_FILE, "w") as f:
             json.dump(metrics, f, indent=4)
 
@@ -80,9 +94,15 @@ if train_file:
         st.write("MSE:", mse)
         st.write("RMSE:", rmse)
 
+
 st.markdown("---")
 
-st.header("Testar modelo")
+
+# ---------------------------
+# SEÇÃO: TESTE
+# ---------------------------
+
+st.header("🧪 Testar modelo")
 
 test_file = st.file_uploader(
     "Envie o CSV de teste",
@@ -90,47 +110,74 @@ test_file = st.file_uploader(
     key="test"
 )
 
-has_label = st.checkbox("O CSV contém a coluna 'time'?")
+has_label = st.checkbox("Este CSV contém coluna 'time'? (opcional)")
 
-if has_label and "time" not in df.columns:
-    st.error("Você marcou que o arquivo tem rótulos, mas a coluna 'time' não existe.")
-    st.stop()
+model = load_model()
+scaler = load_scaler()
 
 if test_file:
-    model = load_model()
-    scaler = load_scaler()
+    if model is None or scaler is None:
+        st.error("Nenhum modelo encontrado. Treine antes de testar.")
+        st.stop()
 
-    if model is None:
-        st.error("Nenhum modelo encontrado. Treine antes.")
+    df = pd.read_csv(test_file)
+
+    # Normaliza colunas
+    df.columns = [c.strip() for c in df.columns]
+
+    # Verifica rótulo
+    if has_label:
+        if "time" not in df.columns:
+            st.error("Você marcou que o CSV tem rótulo, mas não existe coluna 'time'.")
+            st.stop()
+
+        y = df["time"]
+        X = df.drop(columns=["time"])
     else:
-        df = pd.read_csv(test_file)
-        if has_label:
-            y = df["time"]
-            X = df.drop(columns=["time"])
-        else:
-            X = df
-            y = None
+        y = None
+        X = df.copy()
 
-        X_scaled = scaler.transform(X)
-        pred = model.predict(X_scaled)
+    # Corrigir nomes das features
+    expected = scaler.feature_names_in_
 
-        df["predicted"] = pred
+    # Verificar colunas faltantes
+    missing = [col for col in expected if col not in X.columns]
+    if missing:
+        st.error(f"Faltam colunas no CSV: {missing}")
+        st.stop()
 
-        st.write("Resultado:")
-        st.dataframe(df)
+    # Deixa somente as colunas esperadas e na ordem correta
+    X = X[expected]
 
-        if y is not None:
-            rmse = calculate_rmse(y, pred)
-            st.success(f"RMSE: {rmse:.4f}")
+    # Transformar
+    X_scaled = scaler.transform(X)
+    predictions = model.predict(X_scaled)
 
-        csv_download = df.to_csv(index=False).encode("utf-8")
-        st.download_button("⬇ Baixar resultado CSV", csv_download, "predicoes.csv")
+    # Resultado final
+    df["predicted"] = predictions
+
+    st.write("Resultado:")
+    st.dataframe(df)
+
+    # Se houver rótulo no CSV, calcula RMSE
+    if y is not None:
+        rmse = calculate_rmse(y, predictions)
+        st.success(f"RMSE no teste: {rmse:.4f}")
+
+    # Download CSV
+    csv_bytes = df.to_csv(index=False).encode("utf-8")
+    st.download_button("⬇ Baixar CSV com predições", csv_bytes, "resultado.csv")
 
 
 st.markdown("---")
 
+
+# ---------------------------
+# SEÇÃO: RESET
+# ---------------------------
+
 st.header("🔄 Resetar Modelo")
 
-if st.button("Resetar"):
+if st.button("Resetar modelo"):
     reset_model_files()
-    st.success("Modelo resetado com sucesso! Todos os arquivos foram apagados.")
+    st.success("Todos os arquivos do modelo foram removidos.")
