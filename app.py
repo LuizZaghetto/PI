@@ -216,7 +216,7 @@ if test_file:
         st.error("Nenhum modelo encontrado. Treine antes de testar.")
         st.stop()
 
-    df = pd.read_csv(test_file, sep=';')
+    df = pd.read_csv(test_file)
     df.columns = [c.strip() for c in df.columns]
 
     expected_cols = scaler.feature_names_in_
